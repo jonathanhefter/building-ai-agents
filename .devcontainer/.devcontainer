@@ -6,7 +6,7 @@
     "ghcr.io/devcontainers/features/ffmpeg:1": {}
   },
 
-  "postCreateCommand": "pip install --no-cache-dir requests pydub",
+  "postCreateCommand": "pip install --no-cache-dir requests pydub gradio==4.*",
 
   "customizations": {
     "vscode": {
