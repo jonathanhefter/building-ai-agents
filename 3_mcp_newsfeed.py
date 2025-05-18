@@ -1,6 +1,7 @@
-# adding mcp (google calendar) from https://github.com/nspady/google-calendar-mcp
+# adding mcp from https://github.com/ltejedor/newsfeed-mcp
+
 from dotenv import load_dotenv
-from smolagents import CodeAgent, LiteLLMModel
+from smolagents import CodeAgent, InferenceClientModel
 from mcpadapt.core import MCPAdapt
 from mcpadapt.smolagents_adapter import SmolAgentsAdapter
 from mcp import StdioServerParameters
@@ -9,6 +10,7 @@ import pandas as pd
 import time
 import os
 
+# Load environment variables
 load_dotenv()
 
 class SafeNameAdapter(SmolAgentsAdapter):
@@ -20,42 +22,45 @@ class SafeNameAdapter(SmolAgentsAdapter):
 
 def main():
     # Initialize the LLM model (Anthropic Claude)
-    model = LiteLLMModel(model_id="anthropic/claude-3-7-sonnet-latest")
-
-    # Set up the MCP server parameters for google-calendar-mcp
+    model = InferenceClientModel(model_id="Qwen/Qwen2.5-72B-Instruct")
+    
+    # Set up the MCP server parameters for newsfeed-mcp
     current_dir = os.path.dirname(os.path.abspath(__file__))
     mcp_dir = os.path.abspath(
-        os.path.join(current_dir, "mcp", "google-calendar-mcp")
+        os.path.join(current_dir, "mcp", "newsfeed-mcp")
     )
-
-    # Launch the google-calendar-mcp server using its built entrypoint (absolute path)
-    script_path = os.path.join(mcp_dir, "build", "index.js")
+    
+    # Launch the newsfeed-mcp server
     server_parameters = StdioServerParameters(
-        command="node",
-        args=[script_path],
+        command="python",
+        args=[os.path.join(mcp_dir, "news_mcp.py")],
         env=os.environ.copy(),
     )
-
-    # Retrieve tools from the Google Calendar MCP server, sanitizing names
-    with MCPAdapt(server_parameters, SafeNameAdapter()) as calendar_tool_list:
-        calendar_tools = [*calendar_tool_list]
+    
+    # Retrieve tools from the News MCP server, sanitizing names
+    with MCPAdapt(server_parameters, SafeNameAdapter()) as news_tool_list:
+        news_tools = [*news_tool_list]
         
-        # Manager agent orchestrates the workflow
+        print(f"Loaded {len(news_tools)} news tools from MCP server")
+        
+        # News agent with access to the newsfeed tools
         agent = CodeAgent(
-            tools=calendar_tools,
+            tools=news_tools,
             model=model,
             add_base_tools=True,
-            additional_authorized_imports=["time"],
+            additional_authorized_imports=["time", "pandas", "json"],
         )
-
-        # Interactive REPL via manager
+        
+        # Interactive REPL
         while True:
-            task = input("\nEnter task (or 'exit' to quit): ")
+            task = input("\nEnter news query (or 'exit' to quit): ")
             if task.lower() in ['exit', 'quit']:
                 break
+            
             try:
+                print("\nThinking...")
                 result = agent.run(task)
-                print("\nManager response:\n", result)
+                print("\nAgent response:\n", result)
             except Exception as e:
                 print(f"Error: {e}")
 

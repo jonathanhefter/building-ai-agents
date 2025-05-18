@@ -7,4 +7,6 @@ selenium
 helium 
 pillow
 smolagents[litellm]
+smolagents[gradio]
 duckduckgo-search
+huggingface_hub
